@@ -1,1 +1,5 @@
-*.env
+.env
+*.log
+.vscode/*
+!.vscode/extensions.json
+data.json

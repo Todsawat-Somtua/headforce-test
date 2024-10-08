@@ -34,7 +34,6 @@ for page in pages:
     props = page['properties']
     task_name = props['Task_name']['title'][0]["text"]["content"]
     status = props['Status']['status']['name']
-    due_date = props['Due date']['date']['end']
-    if due_date:
-        due_date = datetime.fromisoformat(due_date)
+    due_date = props['Due date']['date']['start']
+    due_date = datetime.fromisoformat(due_date)
     print(f"Task: {task_name}, Status: {status}, Due Date: {due_date}")
