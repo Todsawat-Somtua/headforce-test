@@ -3,7 +3,11 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 from datetime import datetime
+from flask import Flask, jsonify
+
 load_dotenv()
+
+app = Flask(__name__)
 
 # Constants
 POSTGRESQL_CONNECTION = f"dbname='{os.getenv('DB_NAME')}' user='{os.getenv('DB_USERNAME')}' host='{os.getenv('DB_HOST')}' password='{os.getenv('DB_PASSWORD')}' port='{os.getenv('DB_PORT')}'"
@@ -97,39 +101,43 @@ def sync_data():
     cursor.close()
     conn.close()
 
-def update_notion_page(page_id, task_name, status, due_date):
-    url = f"https://api.notion.com/v1/pages/{page_id}"
-    headers = {
-        "Authorization": f"Bearer {os.getenv('NOTION_TOKEN')}",
-        "Notion-Version": f"{os.getenv('NOTION_VERSION')}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "properties": {
-            "Task name": {
-                "title": [
-                    {
-                        "text": {
-                            "content": task_name
-                        }
-                    }
-                ]
-            },
-            "Status": {
-                "status": {
-                    "name": status
-                }
-            },
-            "Due date": {
-                "date": {
-                    "start": due_date.isoformat()
-                }
-            }
-        }
-    }
-    response = requests.patch(url, headers=headers, json=data)
-    if response.status_code != 200:
-        response.raise_for_status()
+@app.route('/fetch_notion', methods=['GET'])
+def fetch_notion():
+    try:
+        notion_data = fetch_notion_pages()
+        transformed_data = transform_notion_data(notion_data)
+        return jsonify(transformed_data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/create_table', methods=['POST'])
+def create_db_table():
+    try:
+        create_table()
+        return jsonify({"message": "Table created successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500 
+
+
+@app.route('/insert_data', methods=['POST'])
+def insert_data():
+    try:
+        notion_data = fetch_notion_pages()
+        transformed_data = transform_notion_data(notion_data)
+        insert_data_to_db(transformed_data)
+        return jsonify({"message": "Data inserted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/sync', methods=['POST'])
+def sync():
+    try:
+        sync_data()
+        return jsonify({"message": "Data synced successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    sync_data()
+    app.run(debug=True)
